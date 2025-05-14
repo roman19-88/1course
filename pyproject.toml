@@ -1,0 +1,46 @@
+[tool.poetry]
+name = "python-coursework"
+version = "0.1.0"
+description = "Курсовая работа по анализу транзакций"
+authors = ["Ваше Имя <your.email@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.13"
+pandas = "^2.2.0"
+openpyxl = "^3.1.2"
+requests = "^2.31.0"
+python-dotenv = "^1.1.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 119
+target-version = ['py38']
+include = '\.pyi?$'
+exclude = '''
+/(
+  \.git
+  | \.venv
+  | build
+  | dist
+  | __pycache__
+)/
+'''
+
+[tool.isort]
+line_length = 119
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+
+[tool.mypy]
+disallow_untyped_defs = true
+warn_return_any = true
+exclude = 'venv'
