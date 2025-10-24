@@ -17,18 +17,15 @@ from src.utils import (
 def get_card_info(df: pd.DataFrame) -> List[Dict[str, Any]]:
     """Получение информации о карте"""
     try:
-        card_column = [col for col in df.columns if 'card' in col.lower()][0]
-        amount_column = [col for col in df.columns if 'amount' in col.lower() or 'sum' in col.lower()][0]
-
-        # тут я прогрупировал транзакции по номеру картцы и суммировал рассходы
-        card_groups = df.groupby(card_column)[amount_column].sum().reset_index()
+        # Группируем транзакции по номеру карты и суммируем расходы
+        card_groups = df.groupby("Номер карты")["Сумма операции"].sum().reset_index()
 
         cards_info = []
         for _, row in card_groups.iterrows():
-            card_number = str(row[card_column])
+            card_number = str(row["Номер карты"])
 
             last_digits = card_number[-4:] if len(card_number) >= 4 else card_number
-            total_spent = float(row[amount_column])
+            total_spent = float(row["Сумма операции"])
 
             # кэшбэк у меня равен 1% от общей суммы расходов
             cashback = round(abs(total_spent) * 0.01, 2)
@@ -49,17 +46,12 @@ def get_card_info(df: pd.DataFrame) -> List[Dict[str, Any]]:
 def get_top_transactions(df: pd.DataFrame, limit: int = 5) -> List[Dict[str, Any]]:
     """Получение транзакций по сумме платежа"""
     try:
-        date_column = [col for col in df.columns if 'date' in col.lower()][0]
-        amount_column = [col for col in df.columns if 'amount' in col.lower() or 'sum' in col.lower()][0]
-        category_column = [col for col in df.columns if 'category' in col.lower()][0]
-        description_column = [col for col in df.columns if 'description' in col.lower() or 'desc' in col.lower()][0]
-
-        # отсортировал транзакции по полному значению суммы
-        sorted_df = df.sort_values(by=amount_column, key=abs, ascending=False).head(limit)
+        # Сортируем транзакции по абсолютному значению суммы
+        sorted_df = df.sort_values(by="Сумма операции", key=abs, ascending=False).head(limit)
 
         top_transactions = []
         for _, row in sorted_df.iterrows():
-            transaction_date = row[date_column]
+            transaction_date = row["Дата операции"]
             if isinstance(transaction_date, pd.Timestamp):
                 formatted_date = transaction_date.strftime("%d.%m.%Y")
             else:
@@ -67,9 +59,9 @@ def get_top_transactions(df: pd.DataFrame, limit: int = 5) -> List[Dict[str, Any
 
             top_transactions.append({
                 "date": formatted_date,
-                "amount": float(row[amount_column]),
-                "category": str(row[category_column]),
-                "description": str(row[description_column])
+                "amount": float(row["Сумма операции"]),
+                "category": str(row["Категория"]),
+                "description": str(row["Описание"])
             })
 
         logger.info(f"Получены топ-{limit} транзакции")
@@ -116,24 +108,21 @@ def generate_main_page_response(date_str: str) -> Dict[str, Any]:
 def get_expenses_income_data(df: pd.DataFrame) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """Анализирует расходы и доходы из транзакций"""
     try:
-        amount_column = [col for col in df.columns if 'amount' in col.lower() or 'sum' in col.lower()][0]
-        category_column = [col for col in df.columns if 'category' in col.lower()][0]
+        expenses_df = df[df["Сумма операции"] < 0].copy()
+        income_df = df[df["Сумма операции"] > 0].copy()
 
-        expenses_df = df[df[amount_column] < 0].copy()
-        income_df = df[df[amount_column] > 0].copy()
+        expenses_df["Сумма операции"] = expenses_df["Сумма операции"].abs()
 
-        expenses_df[amount_column] = expenses_df[amount_column].abs()
+        total_expenses = int(expenses_df["Сумма операции"].sum())
+        total_income = int(income_df["Сумма операции"].sum())
 
-        total_expenses = int(expenses_df[amount_column].sum())
-        total_income = int(income_df[amount_column].sum())
+        expenses_by_category = expenses_df.groupby("Категория")["Сумма операции"].sum().reset_index()
+        expenses_by_category["Сумма операции"] = expenses_by_category["Сумма операции"].round().astype(int)
+        expenses_by_category = expenses_by_category.sort_values(by="Сумма операции", ascending=False)
 
-        expenses_by_category = expenses_df.groupby(category_column)[amount_column].sum().reset_index()
-        expenses_by_category[amount_column] = expenses_by_category[amount_column].round().astype(int)
-        expenses_by_category = expenses_by_category.sort_values(by=amount_column, ascending=False)
-
-        income_by_category = income_df.groupby(category_column)[amount_column].sum().reset_index()
-        income_by_category[amount_column] = income_by_category[amount_column].round().astype(int)
-        income_by_category = income_by_category.sort_values(by=amount_column, ascending=False)
+        income_by_category = income_df.groupby("Категория")["Сумма операции"].sum().reset_index()
+        income_by_category["Сумма операции"] = income_by_category["Сумма операции"].round().astype(int)
+        income_by_category = income_by_category.sort_values(by="Сумма операции", ascending=False)
 
         expenses_result = {
             "total_amount": total_expenses,
@@ -148,8 +137,8 @@ def get_expenses_income_data(df: pd.DataFrame) -> Tuple[Dict[str, Any], Dict[str
         other_expenses_sum = 0
 
         for _, row in expenses_by_category.iterrows():
-            category = row[category_column]
-            amount = int(row[amount_column])
+            category = row["Категория"]
+            amount = int(row["Сумма операции"])
 
             if category in transfer_cash_categories:
                 transfers_cash.append({
@@ -180,8 +169,8 @@ def get_expenses_income_data(df: pd.DataFrame) -> Tuple[Dict[str, Any], Dict[str
 
         for _, row in income_by_category.iterrows():
             income_result["main"].append({
-                "category": row[category_column],
-                "amount": int(row[amount_column])
+                "category": row["Категория"],
+                "amount": int(row["Сумма операции"])
             })
 
         logger.info(f"Проанализированы расходы ({total_expenses}) и доходы ({total_income})")

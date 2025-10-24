@@ -15,20 +15,20 @@ def analyze_cashback_categories(
     try:
         filtered = filter(
             lambda tx: (
-                "date" in tx
-                and "amount" in tx
-                and "category" in tx
-                and datetime.strptime(tx["date"], "%Y-%m-%d").year == year
-                and datetime.strptime(tx["date"], "%Y-%m-%d").month == month
-                and tx["amount"] < 0
+                "Дата операции" in tx
+                and "Сумма операции" in tx
+                and "Категория" in tx
+                and datetime.strptime(tx["Дата операции"], "%Y-%m-%d").year == year
+                and datetime.strptime(tx["Дата операции"], "%Y-%m-%d").month == month
+                and tx["Сумма операции"] < 0
             ),
             data,
         )
 
         cashback_totals = {}
         for tx in filtered:
-            category = tx["category"]
-            cashback_amount = abs(tx["amount"]) * 0.01
+            category = tx["Категория"]
+            cashback_amount = abs(tx["Сумма операции"]) * 0.01
             cashback_totals[category] = cashback_totals.get(category, 0) + cashback_amount
 
         cashback_totals_rounded = {k: int(round(v)) for k, v in cashback_totals.items()}
@@ -78,13 +78,20 @@ def simple_search(query: str, transactions: List[Dict[str, Any]]) -> str:
         lower_query = query.lower()
         filtered = filter(
             lambda tx: (
-                ("description" in tx and lower_query in tx["description"].lower())
-                or ("category" in tx and lower_query in tx["category"].lower())
+                ("Описание" in tx and tx["Описание"] and lower_query in str(tx["Описание"]).lower())
+                or ("Категория" in tx and tx["Категория"] and lower_query in str(tx["Категория"]).lower())
             ),
             transactions,
         )
 
         result = list(filtered)
+        
+        # Преобразуем Timestamp объекты в строки для JSON сериализации
+        for item in result:
+            for key, value in item.items():
+                if hasattr(value, 'strftime'):  # Если это datetime объект
+                    item[key] = value.strftime('%Y-%m-%d %H:%M:%S')
+        
         json_result = json.dumps(result, ensure_ascii=False)
         logger.info(f"Простой поиск '{query}': найдено {len(result)} транзакций")
         return json_result
@@ -102,7 +109,7 @@ def search_phone_numbers(transactions: List[Dict[str, Any]]) -> str:
 
     try:
         filtered = filter(
-            lambda tx: "description" in tx and PHONE_PATTERN.search(tx["description"]),
+            lambda tx: "Описание" in tx and PHONE_PATTERN.search(tx["Описание"]),
             transactions,
         )
 
@@ -126,9 +133,9 @@ def search_person_transfers(transactions: List[Dict[str, Any]]) -> str:
     try:
         filtered = filter(
             lambda tx: (
-                tx.get("category", "") == TRANSFER_CATEGORY
-                and "description" in tx
-                and PERSON_NAME_PATTERN.search(tx["description"])
+                tx.get("Категория", "") == TRANSFER_CATEGORY
+                and "Описание" in tx
+                and PERSON_NAME_PATTERN.search(tx["Описание"])
             ),
             transactions,
         )

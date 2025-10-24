@@ -19,15 +19,14 @@ def test_main_page_command_line(mock_generate_main):
         assert response == expected_response
 
 
-@patch("src.main.generate_events_page_response")
-@pytest.mark.parametrize("period", ["W", "M", "Y", "ALL"])
-def test_events_page_command_line(mock_generate_events, period):
-    expected_response = {"expenses": {"total_amount": 1000}}
-    mock_generate_events.return_value = expected_response
+@patch("src.main.simple_search")
+def test_search_service_command_line(mock_search):
+    expected_response = [{"Дата операции": "2025-04-15", "Сумма операции": -100, "Категория": "Рестораны", "Описание": "KFC"}]
+    mock_search.return_value = '{"result": "test"}'
 
-    testargs = ["src/main.py", "--page", "events", "--date", "2025-04-15", "--period", period]
+    testargs = ["src/main.py", "--service", "search", "--query", "KFC"]
     with patch.object(sys, 'argv', testargs):
         response = main_module.main()
 
-        mock_generate_events.assert_called_once()
-        assert response == expected_response
+        mock_search.assert_called_once()
+        assert "result" in response

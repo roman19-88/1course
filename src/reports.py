@@ -68,23 +68,25 @@ def spending_by_category(transactions: pd.DataFrame,
         start_date, end_date = get_date_range(date)
 
         filtered = transactions[
-            (pd.to_datetime(transactions['date']) >= start_date)
-            & (pd.to_datetime(transactions['date']) <= end_date)
-            & (transactions['category'] == category)
-            & (transactions['amount'] < 0)
+            (pd.to_datetime(transactions['Дата операции']) >= start_date)
+            & (pd.to_datetime(transactions['Дата операции']) <= end_date)
+            & (transactions['Категория'] == category)
+            & (transactions['Сумма операции'] < 0)
         ]
 
-
-        result = filtered.groupby(pd.to_datetime(filtered['date']).dt.date).agg({
-            'amount': 'sum',
-            'category': 'count'
+        result = filtered.groupby(pd.to_datetime(filtered['Дата операции']).dt.date).agg({
+            'Сумма операции': 'sum',
+            'Категория': 'count'
         }).reset_index()
 
         result = result.rename(columns={
-            'date': 'date',
-            'amount': 'total_spending',
-            'category': 'transactions_count'
+            'Дата операции': 'date',
+            'Сумма операции': 'total_spending',
+            'Категория': 'transactions_count'
         })
+        
+        # Преобразуем даты в строки для JSON сериализации
+        result['date'] = result['date'].astype(str)
 
         result['total_spending'] = result['total_spending'].abs()
 
@@ -104,19 +106,19 @@ def spending_by_weekday(transactions: pd.DataFrame,
         start_date, end_date = get_date_range(date)
 
         filtered = transactions[
-            (pd.to_datetime(transactions['date']) >= start_date)
-            & (pd.to_datetime(transactions['date']) <= end_date)
-            & (transactions['amount'] < 0)
+            (pd.to_datetime(transactions['Дата операции']) >= start_date)
+            & (pd.to_datetime(transactions['Дата операции']) <= end_date)
+            & (transactions['Сумма операции'] < 0)
         ].copy()
 
-        filtered['weekday'] = pd.to_datetime(filtered['date']).dt.day_name()
+        filtered['weekday'] = pd.to_datetime(filtered['Дата операции']).dt.day_name()
 
         result = filtered.groupby('weekday').agg({
-            'amount': lambda x: abs(x.mean())
+            'Сумма операции': lambda x: abs(x.mean())
         }).reset_index()
 
         result = result.rename(columns={
-            'amount': 'average_spending'
+            'Сумма операции': 'average_spending'
         })
 
         weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -139,21 +141,21 @@ def spending_by_workday(transactions: pd.DataFrame,
         start_date, end_date = get_date_range(date)
 
         filtered = transactions[
-            (pd.to_datetime(transactions['date']) >= start_date)
-            & (pd.to_datetime(transactions['date']) <= end_date)
-            & (transactions['amount'] < 0)
+            (pd.to_datetime(transactions['Дата операции']) >= start_date)
+            & (pd.to_datetime(transactions['Дата операции']) <= end_date)
+            & (transactions['Сумма операции'] < 0)
         ].copy()
 
-        filtered['is_weekend'] = pd.to_datetime(filtered['date']).dt.dayofweek.isin(
+        filtered['is_weekend'] = pd.to_datetime(filtered['Дата операции']).dt.dayofweek.isin(
             [5, 6])
         filtered['day_type'] = filtered['is_weekend'].map({True: 'weekend', False: 'workday'})
 
         result = filtered.groupby('day_type').agg({
-            'amount': lambda x: abs(x.mean())
+            'Сумма операции': lambda x: abs(x.mean())
         }).reset_index()
 
         result = result.rename(columns={
-            'amount': 'average_spending'
+            'Сумма операции': 'average_spending'
         })
 
         logger.info("Отчет по типам дней сформирован успешно")

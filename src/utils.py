@@ -84,90 +84,87 @@ def load_transactions(file_path: str) -> pd.DataFrame:
             df = pd.read_excel(abs_file_path)
             logger.info(f"Доступные колонки: {df.columns.tolist()}")
 
-            required_columns = ["date", "card", "amount", "category", "description"]
-            missing_columns = False
+            # Проверяем наличие основных колонок
+            required_columns = ["Дата операции", "Сумма операции", "Номер карты", "Категория", "Описание"]
+            missing_columns = []
 
             for required in required_columns:
-                if not any(required in col.lower() for col in df.columns):
-                    logger.warning(f"В файле отсутствует колонка {required}")
-                    missing_columns = True
-                    break
+                if required not in df.columns:
+                    missing_columns.append(required)
 
-            if not missing_columns:
-                date_column = [col for col in df.columns if "date" in col.lower()][0]
-                df[date_column] = pd.to_datetime(df[date_column])
-                logger.info(f"Успешно загружено {len(df)} транзакций")
-                return df
+            if missing_columns:
+                logger.warning(f"В файле отсутствуют колонки: {missing_columns}")
+                # Создаем тестовые данные с правильной структурой
+                return _create_test_data(abs_file_path)
 
-        logger.warning(
-            "Файл не найден или отсутствуют нужные колонки. Создаю тестовые данные."
-        )
+            # Преобразуем дату в правильный формат
+            df["Дата операции"] = pd.to_datetime(df["Дата операции"])
+            logger.info(f"Успешно загружено {len(df)} транзакций")
+            return df
 
-        now = datetime.datetime.now()
-        start_of_month = now.replace(day=1)
-
-        import random
-
-        dates: List[datetime.datetime] = []
-        card_numbers: List[str] = []
-        amounts: List[float] = []
-        categories: List[str] = []
-        descriptions: List[str] = []
-
-        for _ in range(20):
-            day_delta = random.randint(0, (now - start_of_month).days)
-            date = start_of_month + datetime.timedelta(days=day_delta)
-            dates.append(date)
-
-            card_numbers.append(random.choice(["1234567890123456", "9876543210987654"]))
-            amounts.append(round(random.uniform(-1000, 1000), 2))
-
-            category = random.choice(
-                [
-                    "Рестораны",
-                    "Супермаркеты",
-                    "Развлечения",
-                    "Транспорт",
-                    "ЖКХ",
-                    "Переводы",
-                    "Зарплата",
-                ]
-            )
-            categories.append(category)
-
-            if category == "Рестораны":
-                descriptions.append(random.choice(["KFC", "Макдоналдс", "Суши"]))
-            elif category == "Супермаркеты":
-                descriptions.append(random.choice(["Пятерочка", "Магнит", "Лента"]))
-            else:
-                descriptions.append(f"Описание для {category}")
-
-        test_data = {
-            "date": dates,
-            "card_number": card_numbers,
-            "amount": amounts,
-            "category": categories,
-            "description": descriptions,
-        }
-
-        test_df = pd.DataFrame(test_data)
-
-        os.makedirs(os.path.dirname(abs_file_path), exist_ok=True)
-        test_df.to_excel(abs_file_path, index=False)
-        logger.info(f"Созданы и сохранены тестовые данные ({len(test_df)} записей)")
-        return test_df
+        logger.warning("Файл не найден. Создаю тестовые данные.")
+        return _create_test_data(abs_file_path)
 
     except Exception as e:
         logger.error(f"Ошибка при загрузке файла: {e}")
-        return pd.DataFrame(
-            {
-                "date": [datetime.datetime.now()],
-                "card_number": ["1234567890123456"],
-                "amount": [100.0],
-                "category": ["Тест"],
-                "description": ["Тестовая запись"],
-            }
+        return _create_test_data(os.path.join(BASE_DIR, file_path))
+
+
+def _create_test_data(file_path: str) -> pd.DataFrame:
+    """Создает тестовые данные с правильной структурой таблицы"""
+    now = datetime.datetime.now()
+    start_of_month = now.replace(day=1)
+
+    import random
+
+    dates: List[datetime.datetime] = []
+    card_numbers: List[str] = []
+    amounts: List[float] = []
+    categories: List[str] = []
+    descriptions: List[str] = []
+
+    for _ in range(20):
+        day_delta = random.randint(0, (now - start_of_month).days)
+        date = start_of_month + datetime.timedelta(days=day_delta)
+        dates.append(date)
+
+        card_numbers.append(random.choice(["1234567890123456", "9876543210987654"]))
+        amounts.append(round(random.uniform(-1000, 1000), 2))
+
+        category = random.choice(
+            [
+                "Рестораны",
+                "Супермаркеты", 
+                "Развлечения",
+                "Транспорт",
+                "ЖКХ",
+                "Переводы",
+                "Зарплата",
+            ]
         )
+        categories.append(category)
+
+        if category == "Рестораны":
+            descriptions.append(random.choice(["KFC", "Макдоналдс", "Суши"]))
+        elif category == "Супермаркеты":
+            descriptions.append(random.choice(["Пятерочка", "Магнит", "Лента"]))
+        else:
+            descriptions.append(f"Описание для {category}")
+
+    test_data = {
+        "Дата операции": dates,
+        "Номер карты": card_numbers,
+        "Сумма операции": amounts,
+        "Категория": categories,
+        "Описание": descriptions,
+    }
+
+    test_df = pd.DataFrame(test_data)
+
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    test_df.to_excel(file_path, index=False)
+    logger.info(f"Созданы и сохранены тестовые данные ({len(test_df)} записей)")
+    return test_df
 
 
 def filter_transactions_by_month(df: pd.DataFrame, date_str: str) -> pd.DataFrame:
@@ -175,8 +172,7 @@ def filter_transactions_by_month(df: pd.DataFrame, date_str: str) -> pd.DataFram
     try:
         target_date = datetime.datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
         start_date = target_date.replace(day=1, hour=0, minute=0, second=0)
-        date_column = [col for col in df.columns if "date" in col.lower()][0]
-        filtered_df = df[(df[date_column] >= start_date) & (df[date_column] <= target_date)]
+        filtered_df = df[(df["Дата операции"] >= start_date) & (df["Дата операции"] <= target_date)]
 
         logger.info(
             f"Отфильтровано {len(filtered_df)} транзакций с "
@@ -315,7 +311,6 @@ def filter_transactions_by_period(
             date_str = date_str.strftime("%Y-%m-%d %H:%M:%S")
 
         target_date = datetime.datetime.strptime(date_str.split()[0], "%Y-%m-%d")
-        date_column = [col for col in df.columns if "date" in col.lower()][0]
 
         if period == "W":
             start_date = target_date - datetime.timedelta(days=target_date.weekday())
@@ -347,7 +342,7 @@ def filter_transactions_by_period(
                 f"по {target_date.strftime('%Y-%m-%d')}"
             )
 
-        filtered_df = df[(df[date_column] >= start_date) & (df[date_column] <= target_date)]
+        filtered_df = df[(df["Дата операции"] >= start_date) & (df["Дата операции"] <= target_date)]
         logger.info(f"Отфильтровано {len(filtered_df)} транзакций за период {period}")
         return filtered_df
     except Exception as e:

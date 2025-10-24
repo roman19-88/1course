@@ -9,13 +9,13 @@ from src.services import (
 )
 
 sample_transactions = [
-    {"date": "2025-04-15", "amount": -100, "category": "Рестораны", "description": "KFC"},
-    {"date": "2025-04-20", "amount": -200, "category": "Супермаркеты", "description": "Пятерочка"},
-    {"date": "2025-04-25", "amount": 300, "category": "Зарплата", "description": ""},
-    {"date": "2025-04-10", "amount": -50, "category": "Переводы", "description": "Валерий А."},
-    {"date": "2025-04-12", "amount": -70, "category": "Переводы", "description": "Сергей З."},
-    {"date": "2025-04-05", "amount": -30, "category": "Транспорт", "description": "Я МТС +7 921 11-22-33"},
-    {"date": "2025-04-05", "amount": -40, "category": "Прочее", "description": "Оплата услуг"},
+    {"Дата операции": "2025-04-15", "Сумма операции": -100, "Категория": "Рестораны", "Описание": "KFC"},
+    {"Дата операции": "2025-04-20", "Сумма операции": -200, "Категория": "Супермаркеты", "Описание": "Пятерочка"},
+    {"Дата операции": "2025-04-25", "Сумма операции": 300, "Категория": "Зарплата", "Описание": ""},
+    {"Дата операции": "2025-04-10", "Сумма операции": -50, "Категория": "Переводы", "Описание": "Валерий А."},
+    {"Дата операции": "2025-04-12", "Сумма операции": -70, "Категория": "Переводы", "Описание": "Сергей З."},
+    {"Дата операции": "2025-04-05", "Сумма операции": -30, "Категория": "Транспорт", "Описание": "Я МТС +7 921 11-22-33"},
+    {"Дата операции": "2025-04-05", "Сумма операции": -40, "Категория": "Прочее", "Описание": "Оплата услуг"},
 ]
 
 investment_transactions = [
@@ -44,19 +44,19 @@ def test_simple_search():
     """Ищет транзакции, содержащие запрос в описании или категории"""
     result_json = simple_search("пятерочка", sample_transactions)
     result = json.loads(result_json)
-    assert any("Пятерочка" in tx["description"] for tx in result)
+    assert any("Пятерочка" in tx["Описание"] for tx in result)
 
 
 def test_search_phone_numbers():
     """Возвращает транзакции, в описании которых есть российские номера"""
     result_json = search_phone_numbers(sample_transactions)
     result = json.loads(result_json)
-    assert any("+7" in tx["description"] for tx in result)
+    assert any("+7" in tx["Описание"] for tx in result)
 
 
 def test_search_person_transfers():
     """Возвращает транзакции с категорией 'Переводы' и описанием"""
     result_json = search_person_transfers(sample_transactions)
     result = json.loads(result_json)
-    assert all(tx["category"] == "Переводы" for tx in result)
-    assert any("Валерий А." in tx["description"] or "Сергей З." in tx["description"] for tx in result)
+    assert all(tx["Категория"] == "Переводы" for tx in result)
+    assert any("Валерий А." in tx["Описание"] or "Сергей З." in tx["Описание"] for tx in result)
